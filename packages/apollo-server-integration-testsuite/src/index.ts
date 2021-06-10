@@ -255,10 +255,70 @@ export default ({
 
       it('throws an error if POST body is missing', async () => {
         app = await createApp();
-        const req = request(app).post('/graphql').send();
+        const req = request(app).post('/graphql').type('text/plain').send('  ');
         return req.then((res) => {
-          expect(res.status).toEqual(500);
-          expect((res.error as HTTPError).text).toMatch('POST body missing.');
+          expect(res.status).toEqual(400);
+          expect((res.error as HTTPError).text).toMatch('POST body missing');
+        });
+      });
+
+      it('throws an error if POST body is missing even with content-type', async () => {
+        app = await createApp();
+        const req = request(app)
+          .post('/graphql')
+          .type('application/json')
+          .send();
+        return req.then((res) => {
+          expect(res.status).toEqual(400);
+          expect((res.error as HTTPError).text).toMatch('POST body missing');
+        });
+      });
+
+      it('throws an error if invalid content-type', async () => {
+        app = await createApp();
+        const req = request(app)
+          .post('/graphql')
+          .type('text/plain')
+          .send(
+            JSON.stringify({
+              query: 'query test{ testString }',
+            }),
+          );
+        return req.then((res) => {
+          expect(res.status).toEqual(400);
+          expect((res.error as HTTPError).text).toMatch('invalid Content-Type');
+        });
+      });
+
+      it('throws an error if POST operation is missing', async () => {
+        app = await createApp();
+        const req = request(app).post('/graphql').send({});
+        return req.then((res) => {
+          expect(res.status).toEqual(400);
+          expect((res.error as HTTPError).text).toMatch('has no keys');
+        });
+      });
+
+      it('throws an error if POST operation is empty', async () => {
+        app = await createApp();
+        const req = request(app).post('/graphql').send({ query: '' });
+        return req.then((res) => {
+          expect(res.status).toEqual(400);
+          expect((res.error as HTTPError).text).toMatch('non-empty `query`');
+        });
+      });
+
+      it('throws an error if POST JSON is malformed', async () => {
+        app = await createApp();
+        const req = request(app)
+          .post('/graphql')
+          .type('application/json')
+          .send('foo');
+        return req.then((res) => {
+          expect(res.status).toEqual(400);
+          expect((res.error as HTTPError).text).toMatch(
+            'SyntaxError: Unexpected token f',
+          );
         });
       });
 
